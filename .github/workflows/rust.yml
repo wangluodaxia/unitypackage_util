@@ -15,25 +15,37 @@ jobs:
     runs-on: windows-2022
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
 
       - name: Cargo build
         run: cargo build --verbose --release
-        shell: bash
 
       - name: Run unitypackage_util help
         run: |
           ./target/release/unitypackage_util.exe --help
-        shell: bash
 
       - name: Prepare artifacts
         run: |
-          export TARGET=unitypackage_util-windows-x86_64
-          mkdir $TARGET
-          cp LICENSE $TARGET/unitypackage_util-License.txt
-          cp target/release/unitypackage_util.exe $TARGET/unitypackage_util-windows-x86_64.exe
-          7z a -r $TARGET.zip $TARGET
-        shell: bash
+          $TARGET = "unitypackage_util-windows-x86_64"
+          New-Item -ItemType Directory -Force -Path $TARGET
+          Copy-Item LICENSE "$TARGET/unitypackage_util-License.txt"
+          Copy-Item target/release/unitypackage_util.exe "$TARGET/unitypackage_util-windows-x86_64.exe"
+          Compress-Archive -Path $TARGET -DestinationPath "$TARGET.zip"
 
       - name: Release
         uses: softprops/action-gh-release@v1
@@ -43,11 +55,8 @@ jobs:
             unitypackage_util-windows-x86_64.zip
             unitypackage_util-windows-x86_64/unitypackage_util-License.txt
 
-      - name: unitypackage_util-windows-x86_64
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: unitypackage_util-windows-x86_64
           path: unitypackage_util-windows-x86_64/*
-
-
-
